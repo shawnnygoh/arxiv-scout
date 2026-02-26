@@ -1,0 +1,189 @@
+{
+  "serverInfo": {
+    "name": "Arxiv Scout",
+    "version": "0.1.0"
+  },
+  "configSchema": {
+    "type": "object",
+    "description": "Configuration schema for the Arxiv Scout MCP server.",
+    "properties": {
+      "SEMANTIC_SCHOLAR_API_KEY": {
+        "type": "string",
+        "title": "Semantic Scholar API Key",
+        "description": "Optional: An API key for Semantic Scholar to enable higher rate limits for citation and reference lookups."
+      }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "tools": [
+    {
+      "name": "arxiv_search_papers",
+      "description": "Search arXiv for papers using advanced query syntax.",
+      "annotations": {
+        "usageTips": "Combine field prefixes (ti: for title, au: for author) with boolean AND/OR for high-precision discovery. Use categories to narrow results to specific fields like cs.AI.",
+        "group": "Search"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "The search keywords or structured arXiv query string (e.g., 'au:vaswani AND ti:attention')." },
+          "max_results": { "type": "integer", "default": 10, "description": "The maximum number of papers to return in the results list (up to 50)." },
+          "categories": { "type": "array", "items": { "type": "string" }, "description": "A list of arXiv category codes (e.g., 'cs.LG') or natural language subject names to filter by." },
+          "sort_by": { "type": "string", "enum": ["relevance", "submitted_date", "last_updated"], "default": "relevance", "description": "The criteria used to order the search results." },
+          "date_from": { "type": "string", "description": "Filter results to papers published on or after this date (format: YYYY-MM-DD)." },
+          "date_to": { "type": "string", "description": "Filter results to papers published on or before this date (format: YYYY-MM-DD)." },
+          "offset": { "type": "integer", "default": 0, "description": "The number of search results to skip, used for paginating through large result sets." },
+          "output_format": { "type": "string", "enum": ["markdown", "json"], "default": "markdown", "description": "The desired format for the tool's response output." }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "arxiv_get_paper",
+      "description": "Fetch complete metadata for a specific arXiv paper.",
+      "annotations": {
+        "usageTips": "Use this tool when you have a direct arXiv ID or URL to retrieve the full abstract and metadata without performing a search.",
+        "group": "Retrieval"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "arxiv_id": { "type": "string", "description": "The unique arXiv identifier (e.g., '1706.03762') or the full arXiv.org URL." },
+          "output_format": { "type": "string", "enum": ["markdown", "json"], "default": "markdown", "description": "Choose between human-readable markdown or structured JSON data." }
+        },
+        "required": ["arxiv_id"]
+      }
+    },
+    {
+      "name": "arxiv_get_papers_batch",
+      "description": "Retrieve metadata for multiple papers in a single call.",
+      "annotations": {
+        "usageTips": "This is significantly more efficient than calling arxiv_get_paper multiple times when analyzing a list of IDs.",
+        "group": "Retrieval"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "arxiv_ids": { "type": "array", "items": { "type": "string" }, "description": "A list containing up to 20 arXiv identifiers or full URLs." },
+          "output_format": { "type": "string", "enum": ["markdown", "json"], "default": "markdown", "description": "The format of the final response (markdown or JSON)." }
+        },
+        "required": ["arxiv_ids"]
+      }
+    },
+    {
+      "name": "arxiv_download_and_extract",
+      "description": "Extract full text from a paper's PDF.",
+      "annotations": {
+        "usageTips": "Target specific sections using start_page and end_page to save context tokens. Excellent for reading the Methodology or Results sections deeply.",
+        "group": "Analysis"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "arxiv_id": { "type": "string", "description": "The arXiv ID of the paper from which to extract text." },
+          "max_characters": { "type": "integer", "default": 50000, "description": "The maximum number of characters to return from the PDF to prevent context window overflow." },
+          "start_page": { "type": "integer", "description": "The 1-indexed page number where text extraction should begin." },
+          "end_page": { "type": "integer", "description": "The 1-indexed page number where text extraction should stop." },
+          "include_sections": { "type": "boolean", "default": true, "description": "Whether to include an automatically detected outline of the paper's sections." },
+          "include_references": { "type": "boolean", "default": false, "description": "Whether to include the bibliography list extracted from the end of the PDF." }
+        },
+        "required": ["arxiv_id"]
+      }
+    },
+    {
+      "name": "arxiv_get_references",
+      "description": "List the papers that this paper cites.",
+      "annotations": {
+        "usageTips": "Use this for 'backwards snowballing' to find the foundational research this paper relies on. Powered by Semantic Scholar.",
+        "group": "Citations"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "arxiv_id": { "type": "string", "description": "The arXiv ID of the paper whose references you wish to explore." },
+          "limit": { "type": "integer", "default": 100, "description": "The maximum number of outbound references to retrieve." },
+          "output_format": { "type": "string", "enum": ["markdown", "json"], "default": "markdown", "description": "The desired output format for the reference list." }
+        },
+        "required": ["arxiv_id"]
+      }
+    },
+    {
+      "name": "arxiv_get_citations",
+      "description": "List newer papers that have cited this paper.",
+      "annotations": {
+        "usageTips": "Use this for 'forward snowballing' to find the most recent work that builds upon this paper. Powered by Semantic Scholar.",
+        "group": "Citations"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "arxiv_id": { "type": "string", "description": "The arXiv ID of the paper to check for inbound citations." },
+          "limit": { "type": "integer", "default": 100, "description": "The maximum number of inbound citations to retrieve." },
+          "output_format": { "type": "string", "enum": ["markdown", "json"], "default": "markdown", "description": "The desired output format for the citation list." }
+        },
+        "required": ["arxiv_id"]
+      }
+    },
+    {
+      "name": "arxiv_list_categories",
+      "description": "Browse the arXiv category taxonomy.",
+      "annotations": {
+        "usageTips": "Helps in finding the exact category code (e.g., 'stat.ML') for a given research topic.",
+        "group": "Reference"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "group": { "type": "string", "description": "An optional arXiv group code (e.g., 'cs') or a natural language search term (e.g., 'robotics')." },
+          "output_format": { "type": "string", "enum": ["markdown", "json"], "default": "markdown", "description": "The desired output format for the category list." }
+        }
+      }
+    },
+    {
+      "name": "arxiv_cache_stats",
+      "description": "View internal cache hit rates and sizes.",
+      "annotations": {
+        "usageTips": "Useful for monitoring the server's performance and checking how much data is stored locally.",
+        "group": "System"
+      },
+      "inputSchema": {
+        "type": "object",
+        "description": "Schema for viewing cache statistics. Requires no input parameters.",
+        "properties": {
+          "verbose": { "type": "boolean", "default": false, "description": "Optional flag to show detailed stats." }
+        }
+      }
+    }
+  ],
+  "resources": [
+    { "uri": "arxiv://categories", "name": "arXiv Taxonomy", "description": "A full list of arXiv subject category codes and their descriptions." },
+    { "uri": "arxiv://help/query-syntax", "name": "Query Syntax Guide", "description": "A reference guide for advanced search operators like ti:, au:, and boolean logic." },
+    { "uri": "arxiv://server/info", "name": "Server Info", "description": "An overview of the server's version, tools, and citations data source." }
+  ],
+  "prompts": [
+    {
+      "name": "summarize_paper",
+      "description": "Generate a high-quality structured summary using extracted full text.",
+      "arguments": [
+        { "name": "arxiv_id", "description": "The unique arXiv ID of the paper to be summarized.", "required": true }
+      ]
+    },
+    {
+      "name": "compare_papers",
+      "description": "Perform a side-by-side analysis of 2-5 arXiv papers.",
+      "arguments": [
+        { "name": "arxiv_ids", "description": "A comma-separated list or JSON array of the arXiv IDs to compare.", "required": true }
+      ]
+    },
+    {
+      "name": "literature_review",
+      "description": "Synthesize a professional literature review for a research topic.",
+      "arguments": [
+        { "name": "topic", "description": "The specific research topic or field to review.", "required": true },
+        { "name": "max_papers", "description": "Optional: The number of papers to include in the review (default 10).", "required": false },
+        { "name": "categories", "description": "Optional: Category filters to apply to the review search.", "required": false }
+      ]
+    }
+  ]
+}

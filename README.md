@@ -1,5 +1,7 @@
 # arXiv Scout
 
+[![smithery badge](https://smithery.ai/badge/shawnnygoh/arxiv-scout)](https://smithery.ai/servers/shawnnygoh/arxiv-scout)
+
 A [Model Context Protocol](https://modelcontextprotocol.io) server for searching, retrieving, and analyzing papers from [arXiv.org](https://arxiv.org) with citation data from [Semantic Scholar](https://www.semanticscholar.org/).
 
 No API key required.

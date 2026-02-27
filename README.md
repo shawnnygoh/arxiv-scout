@@ -102,7 +102,11 @@ uv sync
 ### Claude Code
 
 ```bash
+# Manual installation
 claude mcp add --transport http arxiv https://server.smithery.ai/@shawnnygoh/arxiv-scout/mcp
+
+# Using Smithery CLI
+npx -y @smithery/cli@latest mcp add shawnnygoh/arxiv-scout --client claude-code
 ```
 
 ## Configuration

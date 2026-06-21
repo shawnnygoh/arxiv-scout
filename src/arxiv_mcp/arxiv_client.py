@@ -3,6 +3,9 @@
 import asyncio
 import logging
 import tempfile
+import time
+import httpx
+from pathlib import Path
 from typing import Any, Optional
 
 import arxiv
@@ -15,6 +18,7 @@ logger = logging.getLogger("arxiv_mcp.arxiv_client")
 
 # --- Constants ---
 ARXIV_BASE_URL = "https://arxiv.org/abs"
+ARXIV_USER_AGENT = "arxiv-scout/0.1.0 (+https://github.com/shawnnygoh/arxiv-scout)"
 MAX_RETRIES = 3
 RATE_LIMIT_SECONDS = 3.0
 PAGE_SIZE = 50
@@ -127,11 +131,19 @@ def _sync_download_and_extract(
     results = list(_client.results(search))
     if not results:
         raise ValueError(f"No paper found with ID: {arxiv_id}")
-
+    pdf_url = results[0].pdf_url
     with tempfile.TemporaryDirectory() as tmpdir:
-        pdf_path = results[0].download_pdf(
-            dirpath=tmpdir, filename=f"{arxiv_id.replace('/', '_')}.pdf"
-        )
+        pdf_path = Path(tmpdir) / f"{arxiv_id.replace('/', '_')}.pdf"
+        with httpx.Client(follow_redirects=True, timeout=60.0,
+                          headers={"User-Agent": ARXIV_USER_AGENT}) as client:
+            for attempt in range(MAX_RETRIES):
+                resp = client.get(pdf_url)
+                if resp.status_code == 429 and attempt < MAX_RETRIES - 1:
+                    time.sleep(2 ** attempt)  # 1s, 2s, 4s backoff
+                    continue
+                resp.raise_for_status()
+                pdf_path.write_bytes(resp.content)
+                break
         logger.debug("Downloaded PDF for %s (%s)", arxiv_id, pdf_path)
         extracted = extract_paper_text(
             pdf_path=str(pdf_path),

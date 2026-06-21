@@ -8,6 +8,7 @@ dependencies = [
     "arxiv>=2.4.0",
     "httpx>=0.28.1",
     "mcp[cli]>=1.26.0",
+    "fastmcp>=2.11.0",
     "pymupdf>=1.27.1",
     "uvicorn>=0.41.0",
 ]

@@ -29,24 +29,12 @@ session_api_key: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 
 
 def get_semantic_scholar_api_key() -> str | None:
-    """Get the Semantic Scholar API key for the current request.
-
-    Priority:
-    1. Per-session key from URL query params (set by SessionConfigMiddleware)
-    2. Server-wide key from environment variable (fallback for local/DO deploys)
-    """
+    """Get the Semantic Scholar API key for the current request."""
     return session_api_key.get()
 
 
 class SessionConfigMiddleware(BaseHTTPMiddleware):
-    """Capture per-session config from URL query parameters.
-
-    Smithery delivers user config as query params on the MCP endpoint URL:
-        /mcp?SEMANTIC_SCHOLAR_API_KEY=xxx
-
-    This middleware reads them into contextvars so each concurrent
-    request/user gets isolated values. Falls back to env vars.
-    """
+    """Capture per-session config from URL query parameters."""
 
     async def dispatch(self, request, call_next):
         api_key = request.query_params.get("SEMANTIC_SCHOLAR_API_KEY")
@@ -108,9 +96,6 @@ def _parse_list_arg(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-# --- Tools ---
-
-
 @mcp.tool(annotations=ToolAnnotations(
     title="Search arXiv Papers",
     readOnlyHint=True,
@@ -130,10 +115,6 @@ async def arxiv_search_papers(
     output_format: str = "markdown",
 ) -> str:
     """Search arXiv for papers matching a query.
-
-    Supports arXiv query syntax: field prefixes (au:, ti:, abs:, cat:),
-    boolean operators (AND, OR, ANDNOT), and grouping with parentheses.
-    Categories can be arXiv codes (cs.LG) or natural language (machine learning).
 
     Args:
         query: Search query. Examples: "attention mechanism", "au:vaswani AND ti:attention",
@@ -216,9 +197,6 @@ async def arxiv_get_papers_batch(
 ) -> str:
     """Retrieve metadata for multiple papers in a single call.
 
-    More efficient than calling arxiv_get_paper repeatedly — batches the API
-    request and leverages the metadata cache for previously-seen papers.
-
     Args:
         arxiv_ids: List of arXiv IDs or URLs (max 20).
         output_format: "markdown" for human-readable or "json" for structured data.
@@ -253,12 +231,6 @@ async def arxiv_download_and_extract(
     include_references: bool = False,
 ) -> str:
     """Download a paper's PDF and extract its full text.
-
-    Uses smart extraction: strips repeated headers/footers, detects section
-    boundaries (Abstract, Introduction, Methods, etc.), and optionally includes
-    reference entries. Supports page-range extraction for focused reading.
-
-    Results are cached for 24 hours — repeated calls for the same paper are instant.
 
     Args:
         arxiv_id: The arXiv paper ID or URL.
@@ -317,9 +289,6 @@ async def arxiv_get_references(
 ) -> str:
     """Get the papers cited BY this paper (outbound references / bibliography).
 
-    Uses Semantic Scholar's citation graph for structured, accurate results.
-    Falls back to PDF text extraction if the paper isn't indexed by S2.
-
     Args:
         arxiv_id: The arXiv paper ID or URL.
         limit: Maximum number of references to return (1-500, default 100).
@@ -375,10 +344,6 @@ async def arxiv_get_citations(
     output_format: str = "markdown",
 ) -> str:
     """Get papers that CITE this paper (inbound citations).
-
-    Uses Semantic Scholar's citation graph. This data cannot be obtained from
-    arXiv or the paper's PDF — only a citation index like Semantic Scholar
-    tracks which papers reference a given work.
 
     Args:
         arxiv_id: The arXiv paper ID or URL.
@@ -485,12 +450,6 @@ async def arxiv_cache_stats(
     and text extraction caches.
     """
     return formatting.format_cache_stats(metadata_cache.stats, text_cache.stats)
-
-
-# --- Prompts ---
-#
-# MCP prompts pass all arguments as strings, so list parameters like
-# arxiv_ids must be typed as str and parsed internally via _parse_list_arg.
 
 
 @mcp.prompt()
@@ -679,9 +638,6 @@ Please structure the review as follows:
 Cite papers by their number (e.g., [1], [3, 7]). Aim for ~800-1200 words."""
 
 
-# --- Resources ---
-
-
 @mcp.resource("arxiv://categories")
 async def resource_categories() -> str:
     """Complete arXiv category taxonomy with codes and descriptions."""
@@ -766,9 +722,6 @@ References and citations use the Semantic Scholar Academic Graph API.
 If a paper isn't indexed by S2, references fall back to PDF text extraction.
 Pass SEMANTIC_SCHOLAR_API_KEY as a connection config for higher rate limits (optional).
 """
-
-
-# --- Entry Point ---
 
 
 def main():
